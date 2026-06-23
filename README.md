@@ -37,7 +37,7 @@ netflix-content-analysis/
 ## How to run it
 
 ```bash
-git clone https://github.com/pranaybeemanapalli/netflix-content-analysis
+git clone https://github.com/pranay-2310/netflix-content-analysis
 cd netflix-content-analysis
 pip install -r requirements.txt
 jupyter notebook notebooks/netflix_analysis.ipynb
