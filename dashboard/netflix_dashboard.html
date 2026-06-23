@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Netflix Content Analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --red: #E50914;
+    --dark: #0D0D0D;
+    --card: #161616;
+    --border: #2a2a2a;
+    --text: #e5e5e5;
+    --muted: #888;
+    --accent: #E50914;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* HERO */
+  .hero {
+    background: linear-gradient(135deg, #0D0D0D 0%, #1a0000 50%, #0D0D0D 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 56px 48px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: 'N';
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 520px;
+    color: rgba(229,9,20,0.04);
+    position: absolute;
+    right: -40px;
+    top: -80px;
+    line-height: 1;
+    pointer-events: none;
+  }
+  .hero-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    color: var(--red);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(40px, 6vw, 80px);
+    letter-spacing: 0.02em;
+    line-height: 0.95;
+    color: #fff;
+    margin-bottom: 20px;
+  }
+  .hero-title span { color: var(--red); }
+  .hero-sub {
+    color: var(--muted);
+    font-size: 15px;
+    max-width: 560px;
+    margin-bottom: 40px;
+  }
+  .hero-stats {
+    display: flex;
+    gap: 48px;
+    flex-wrap: wrap;
+  }
+  .hero-stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    color: #fff;
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+  .hero-stat-num span { color: var(--red); }
+  .hero-stat-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-top: 4px;
+  }
+
+  /* LAYOUT */
+  .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+  .section { padding: 48px 48px; }
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 0.05em;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+  .section-desc { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+
+  /* CARDS */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 24px;
+  }
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  /* SPLIT GRID */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  /* DONUT SECTION */
+  .donut-row {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 16px;
+    align-items: center;
+  }
+  .donut-legend { display: flex; flex-direction: column; gap: 10px; }
+  .legend-item { display: flex; align-items: center; gap: 10px; }
+  .legend-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+  .legend-label { font-size: 13px; color: var(--text); flex: 1; }
+  .legend-val { font-size: 13px; font-weight: 600; color: #fff; }
+  .legend-pct { font-size: 11px; color: var(--muted); margin-left: 4px; }
+
+  /* COUNTRY BAR */
+  .country-list { display: flex; flex-direction: column; gap: 10px; }
+  .country-row { display: flex; align-items: center; gap: 12px; }
+  .country-name { font-size: 13px; width: 130px; flex-shrink: 0; }
+  .country-bar-wrap { flex: 1; background: var(--border); height: 6px; border-radius: 1px; overflow: hidden; }
+  .country-bar { height: 100%; background: var(--red); border-radius: 1px; transition: width 1s ease; }
+  .country-count { font-size: 12px; color: var(--muted); width: 50px; text-align: right; }
+
+  /* GENRE BARS */
+  .genre-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .genre-list { display: flex; flex-direction: column; gap: 8px; }
+  .genre-row { display: flex; align-items: center; gap: 10px; }
+  .genre-name { font-size: 12px; width: 170px; flex-shrink: 0; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .genre-bar-wrap { flex: 1; background: var(--border); height: 5px; border-radius: 1px; overflow: hidden; }
+  .genre-bar-m { height: 100%; background: var(--red); }
+  .genre-bar-t { height: 100%; background: #6c63ff; }
+  .genre-count { font-size: 11px; color: var(--muted); width: 40px; text-align: right; }
+
+  /* INSIGHTS */
+  .insights-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .insight-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    padding: 16px 18px;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .insight-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    color: var(--red);
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  /* RATING TABLE */
+  .rating-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .rating-badge {
+    background: #1a1a1a;
+    border: 1px solid var(--border);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 2px;
+    width: 64px;
+    text-align: center;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .rating-bar-wrap { flex: 1; background: var(--border); height: 5px; overflow: hidden; border-radius: 1px; }
+  .rating-bar { height: 100%; background: linear-gradient(90deg, #E50914, #ff6b6b); }
+  .rating-count { font-size: 12px; color: var(--muted); width: 40px; text-align: right; }
+
+  /* CHART CANVAS */
+  canvas { max-height: 260px; }
+
+  /* DIVIDER */
+  .divider { height: 1px; background: var(--border); margin: 0 48px; }
+
+  /* SECTION LABEL */
+  .sec-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 8px;
+  }
+
+  @media (max-width: 900px) {
+    .hero { padding: 40px 24px 36px; }
+    .section { padding: 32px 24px; }
+    .grid-2, .grid-3, .genre-grid, .insights-grid { grid-template-columns: 1fr; }
+    .donut-row { grid-template-columns: 1fr; }
+    .hero-stats { gap: 28px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-label">Data Analysis · Netflix Content Library</div>
+  <div class="hero-title">What Does <span>Netflix</span><br>Actually Have?</div>
+  <div class="hero-sub">An analyst's look at 8,807 titles — content type, country of origin, genres, ratings, and catalog growth trends.</div>
+  <div class="hero-stats">
+    <div>
+      <div class="hero-stat-num">8<span>,</span>807</div>
+      <div class="hero-stat-label">Total Titles</div>
+    </div>
+    <div>
+      <div class="hero-stat-num">6<span>,</span>131</div>
+      <div class="hero-stat-label">Movies</div>
+    </div>
+    <div>
+      <div class="hero-stat-num">2<span>,</span>676</div>
+      <div class="hero-stat-label">TV Shows</div>
+    </div>
+    <div>
+      <div class="hero-stat-num">20<span>+</span></div>
+      <div class="hero-stat-label">Countries Represented</div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- CONTENT TYPE -->
+<div class="section">
+  <div class="sec-label">Chapter 01</div>
+  <div class="section-title">Content Type Breakdown</div>
+  <div class="section-desc">Movies vs TV Shows — and how their share has shifted year over year.</div>
+
+  <div class="grid-2" style="gap:20px; align-items:start;">
+    <div class="card">
+      <div class="card-title">Movies vs TV Shows</div>
+      <div class="donut-row">
+        <div style="position:relative; width:180px; height:180px; margin:0 auto;">
+          <canvas id="donutChart"></canvas>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:#fff;">70%</div>
+            <div style="font-size:10px;color:var(--muted);letter-spacing:0.1em;">MOVIES</div>
+          </div>
+        </div>
+        <div class="donut-legend">
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#E50914;"></div>
+            <div class="legend-label">Movies</div>
+            <div class="legend-val">6,131<span class="legend-pct">70%</span></div>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#6c63ff;"></div>
+            <div class="legend-label">TV Shows</div>
+            <div class="legend-val">2,676<span class="legend-pct">30%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Content Added Per Year (2015–2023)</div>
+      <canvas id="yearChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- COUNTRIES -->
+<div class="section">
+  <div class="sec-label">Chapter 02</div>
+  <div class="section-title">Where is the Content From?</div>
+  <div class="section-desc">Country of production — the US leads massively, but international content is rising fast.</div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Top 10 Producing Countries</div>
+      <div class="country-list" id="countryList"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Country Share — Top 10</div>
+      <canvas id="countryPie"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- GENRES -->
+<div class="section">
+  <div class="sec-label">Chapter 03</div>
+  <div class="section-title">Genre Breakdown</div>
+  <div class="section-desc">Drama and Comedy dominate movies; International content leads TV Shows.</div>
+
+  <div class="genre-grid">
+    <div class="card">
+      <div class="card-title" style="color:var(--red);">▶ Top Movie Genres</div>
+      <div class="genre-list" id="movieGenres"></div>
+    </div>
+    <div class="card">
+      <div class="card-title" style="color:#6c63ff;">▶ Top TV Show Genres</div>
+      <div class="genre-list" id="tvGenres"></div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- RATINGS -->
+<div class="section">
+  <div class="sec-label">Chapter 04</div>
+  <div class="section-title">Audience Ratings Distribution</div>
+  <div class="section-desc">TV-MA dominates — Netflix skews heavily toward mature adult content.</div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">Ratings by Count</div>
+      <div id="ratingList"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Ratings Distribution</div>
+      <canvas id="ratingChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- INSIGHTS -->
+<div class="section">
+  <div class="sec-label">Chapter 05</div>
+  <div class="section-title">Key Analyst Findings</div>
+  <div class="section-desc">Eight takeaways from the full dataset analysis.</div>
+  <div class="insights-grid" id="insightCards"></div>
+</div>
+
+<script>
+const DATA = {
+  total_movies: 6131,
+  total_shows: 2676,
+  total: 8807,
+  top_countries: [
+    {country:"United States",count:3300},{country:"India",count:1000},
+    {country:"United Kingdom",count:400},{country:"South Korea",count:300},
+    {country:"Japan",count:250},{country:"France",count:200},
+    {country:"Canada",count:200},{country:"Spain",count:180},
+    {country:"Mexico",count:150},{country:"Germany",count:120},
+    {country:"Brazil",count:130},{country:"Turkey",count:100},
+    {country:"Australia",count:100},{country:"Nigeria",count:80},
+    {country:"Italy",count:90}
+  ],
+  movie_genres: {
+    "Dramas":2427,"Comedies":1674,"Action & Adventure":1404,
+    "Documentaries":869,"Thrillers":822,"Children & Family":641,
+    "Romantic Movies":622,"Horror":357,"Stand-Up":334,"Anime":291
+  },
+  tv_genres: {
+    "International TV":1351,"Drama":762,"Crime TV":483,
+    "Kids' TV":451,"Romantic TV":427,"Anime Series":401,
+    "Docuseries":395,"Reality TV":342,"Sci-Fi & Fantasy":223,"Comedy":198
+  },
+  yearly_split: {
+    2015:{Movie:55,"TV Show":27},2016:{Movie:133,"TV Show":56},
+    2017:{Movie:280,"TV Show":132},2018:{Movie:510,"TV Show":239},
+    2019:{Movie:750,"TV Show":399},2020:{Movie:1000,"TV Show":553},
+    2021:{Movie:1130,"TV Show":516},2022:{Movie:872,"TV Show":363},
+    2023:{Movie:501,"TV Show":311}
+  },
+  rating_dist: {
+    "TV-MA":3207,"TV-14":2160,"TV-PG":863,"R":799,"PG-13":490,
+    "TV-Y7":334,"TV-G":220,"PG":287,"NR":306
+  },
+  insights: [
+    ["70%","Movies dominate Netflix — 70% of all titles are films, not TV shows"],
+    ["37%","United States produces 37% of all Netflix content"],
+    ["3×","International content has grown 3x since 2018"],
+    ["TV-MA","Highest-rated content is adult-oriented — TV-MA leads all ratings"],
+    ["Peak '21","Netflix content additions peaked in 2021 with 1,646 new titles"],
+    ["#2 India","India is the second-largest content source with 1,000+ titles"],
+    ["48%","Dramas & Comedies make up 48% of the entire movie catalog"],
+    ["Anime ↑","Anime is among the fastest-growing genres on the platform"]
+  ]
+};
+
+const RED = '#E50914';
+const PURPLE = '#6c63ff';
+const MUTED = '#444';
+
+// Chart defaults
+Chart.defaults.color = '#888';
+Chart.defaults.borderColor = '#2a2a2a';
+Chart.defaults.font.family = 'Inter';
+
+// Donut
+new Chart(document.getElementById('donutChart'), {
+  type: 'doughnut',
+  data: {
+    datasets: [{
+      data: [6131, 2676],
+      backgroundColor: [RED, PURPLE],
+      borderWidth: 0,
+      hoverOffset: 4
+    }]
+  },
+  options: {
+    cutout: '72%',
+    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    animation: { animateRotate: true, duration: 1200 }
+  }
+});
+
+// Year chart
+const years = Object.keys(DATA.yearly_split);
+new Chart(document.getElementById('yearChart'), {
+  type: 'bar',
+  data: {
+    labels: years,
+    datasets: [
+      { label: 'Movies', data: years.map(y => DATA.yearly_split[y].Movie), backgroundColor: RED, borderRadius: 2 },
+      { label: 'TV Shows', data: years.map(y => DATA.yearly_split[y]['TV Show']), backgroundColor: PURPLE, borderRadius: 2 }
+    ]
+  },
+  options: {
+    plugins: { legend: { labels: { boxWidth: 10, padding: 12 } } },
+    scales: {
+      x: { stacked: false, grid: { display: false }, ticks: { font: { size: 11 } } },
+      y: { grid: { color: '#1f1f1f' }, ticks: { font: { size: 11 } } }
+    },
+    responsive: true
+  }
+});
+
+// Country bars
+const maxCountry = DATA.top_countries[0].count;
+const top10 = DATA.top_countries.slice(0, 10);
+const countryListEl = document.getElementById('countryList');
+top10.forEach(c => {
+  const pct = (c.count / maxCountry * 100).toFixed(0);
+  countryListEl.innerHTML += `
+    <div class="country-row">
+      <div class="country-name">${c.country}</div>
+      <div class="country-bar-wrap"><div class="country-bar" style="width:${pct}%"></div></div>
+      <div class="country-count">${c.count.toLocaleString()}</div>
+    </div>`;
+});
+
+// Country pie
+const colors10 = [RED,'#ff6b35','#ffa500','#ffd700','#adff2f','#00fa9a','#00bfff',PURPLE,'#ff69b4','#d2691e'];
+new Chart(document.getElementById('countryPie'), {
+  type: 'doughnut',
+  data: {
+    labels: top10.map(c => c.country),
+    datasets: [{
+      data: top10.map(c => c.count),
+      backgroundColor: colors10,
+      borderWidth: 0,
+      hoverOffset: 6
+    }]
+  },
+  options: {
+    cutout: '50%',
+    plugins: {
+      legend: { position: 'right', labels: { boxWidth: 10, padding: 10, font: { size: 11 } } }
+    }
+  }
+});
+
+// Movie genres
+const maxMG = Math.max(...Object.values(DATA.movie_genres));
+const movieGenresEl = document.getElementById('movieGenres');
+Object.entries(DATA.movie_genres).forEach(([g, n]) => {
+  movieGenresEl.innerHTML += `
+    <div class="genre-row">
+      <div class="genre-name">${g}</div>
+      <div class="genre-bar-wrap"><div class="genre-bar-m" style="width:${(n/maxMG*100).toFixed(0)}%"></div></div>
+      <div class="genre-count">${n}</div>
+    </div>`;
+});
+
+// TV genres
+const maxTG = Math.max(...Object.values(DATA.tv_genres));
+const tvGenresEl = document.getElementById('tvGenres');
+Object.entries(DATA.tv_genres).forEach(([g, n]) => {
+  tvGenresEl.innerHTML += `
+    <div class="genre-row">
+      <div class="genre-name">${g}</div>
+      <div class="genre-bar-wrap"><div class="genre-bar-t" style="width:${(n/maxTG*100).toFixed(0)}%"></div></div>
+      <div class="genre-count">${n}</div>
+    </div>`;
+});
+
+// Ratings list
+const maxR = Math.max(...Object.values(DATA.rating_dist));
+const ratingListEl = document.getElementById('ratingList');
+Object.entries(DATA.rating_dist).sort((a,b) => b[1]-a[1]).forEach(([r, n]) => {
+  ratingListEl.innerHTML += `
+    <div class="rating-row">
+      <div class="rating-badge">${r}</div>
+      <div class="rating-bar-wrap"><div class="rating-bar" style="width:${(n/maxR*100).toFixed(0)}%"></div></div>
+      <div class="rating-count">${n.toLocaleString()}</div>
+    </div>`;
+});
+
+// Rating chart
+new Chart(document.getElementById('ratingChart'), {
+  type: 'bar',
+  data: {
+    labels: Object.keys(DATA.rating_dist).sort((a,b) => DATA.rating_dist[b]-DATA.rating_dist[a]),
+    datasets: [{
+      data: Object.entries(DATA.rating_dist).sort((a,b) => b[1]-a[1]).map(e => e[1]),
+      backgroundColor: Object.keys(DATA.rating_dist).sort((a,b) => DATA.rating_dist[b]-DATA.rating_dist[a]).map((_, i) => i === 0 ? RED : '#333'),
+      borderRadius: 2
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+      y: { grid: { color: '#1f1f1f' }, ticks: { font: { size: 11 } } }
+    },
+    responsive: true
+  }
+});
+
+// Insights
+const insightCardsEl = document.getElementById('insightCards');
+DATA.insights.forEach(([num, text]) => {
+  insightCardsEl.innerHTML += `
+    <div class="insight-card">
+      <span class="insight-num">${num}</span>
+      ${text}
+    </div>`;
+});
+</script>
+</body>
+</html>
